@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"image/color"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -468,6 +470,10 @@ func initImageGraphic() WidgetInfo {
 						path = r.URI().Path()
 					}
 
+					pwd, _ := os.Getwd()
+					if strings.Index(path, pwd) == 0 {
+						path = path[len(pwd)+1:]
+					}
 					i.File = path
 					if path == "" {
 						i.Image = nil
