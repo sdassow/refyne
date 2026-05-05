@@ -95,15 +95,19 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 	genids := make(map[string]bool)
 	deps := make(map[string]int)
 	for obj, props := range d.Metadata() {
-		if props["name"] != "" {
-			deps[props["name"]] = countContainers(obj)
+		name := props["name"]
+		if name == "" {
+			name = fmt.Sprintf("%p", obj)[1:]
+			props["name-is-generated"] = "1"
+		}
+		deps[name] = countContainers(obj)
+
+		if props["name"] == name {
 			continue
 		}
-		props["name"] = fmt.Sprintf("%p", obj)[1:]
-		props["name-is-generated"] = "1"
 
-		genids[props["name"]] = true
-		deps[props["name"]] = countContainers(obj)
+		genids[name] = true
+		props["name"] = name
 
 		d.Metadata()[obj] = props
 	}
