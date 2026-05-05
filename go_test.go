@@ -268,7 +268,7 @@ func TestExportGoWithoutIds(t *testing.T) {
 	assert.NoError(t, ExportGo(con, ctx, name, buf))
 
 	data := struct {
-		BtnId, NtrId, LblId, BoxId string
+		BtnID, NtrID, LblID, BoxID string
 	}{
 		btnid, ntrid, lblid, boxid,
 	}
