@@ -75,26 +75,66 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 		pkgs[i] = fmt.Sprintf(`	"%s"`, pkgs[i])
 	}
 
+	battrs := make(map[fyne.CanvasObject][]string)
+	for obj, attrs := range d.Attrs() {
+		battrs[obj] = attrs
+	}
+
+	genids := make(map[string]bool)
+	for obj, props := range d.Metadata() {
+		if props["name"] != "" {
+			continue
+		}
+		props["name"] = fmt.Sprintf("%p", obj)[1:]
+		props["name-is-generated"] = "1"
+
+		genids[props["name"]] = true
+
+		d.Metadata()[obj] = props
+	}
+
 	defs := make(map[string]string)
 
 	_, clazz := getTypeOf(obj)
 	main := guidefs.GoString(clazz, obj, d, defs)
 	setup := ""
 
+	for name := range genids {
+		setup += name + " := " + defs[name] + "\n"
+	}
+
 	for _, key := range vars {
 		name := strings.Split(key, " ")[0]
+		if genids[name] {
+			continue
+		}
 		setup += "g." + name + " = " + defs[name] + "\n"
 	}
 
 	attrs := []string{}
 	for obj, props := range d.Metadata() {
-		if props["name"] == "" {
-			continue
+		id := "g." + props["name"]
+		if genids[props["name"]] {
+			id = props["name"]
 		}
 
 		for _, attr := range d.Attrs()[obj] {
-			attrs = append(attrs, "g."+props["name"]+"."+attr)
+			attrs = append(attrs, id+"."+attr)
 		}
+	}
+
+	for obj, attrs := range battrs {
+		d.Attrs()[obj] = attrs
+	}
+
+	for obj, props := range d.Metadata() {
+		if props["name-is-generated"] != "1" {
+			continue
+		}
+		delete(props, "name-is-generated")
+		delete(props, "name")
+
+		d.Metadata()[obj] = props
 	}
 
 	guiName := "gui"

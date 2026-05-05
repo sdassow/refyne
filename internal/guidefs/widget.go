@@ -1353,8 +1353,11 @@ func extractNames(in map[string]WidgetInfo) []string {
 }
 
 func widgetRef(props map[string]string, defs map[string]string, code string) string {
-	if name, ok := props["name"]; ok && name != "" {
+	if name := props["name"]; name != "" {
 		defs[name] = code
+		if props["name-is-generated"] != "" {
+			return name
+		}
 		return "g." + name
 	}
 
