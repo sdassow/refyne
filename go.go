@@ -60,6 +60,18 @@ func main() {
 	return err
 }
 
+func countContainers(obj fyne.CanvasObject) int {
+	con, ok := obj.(*fyne.Container)
+	if !ok {
+		return 0
+	}
+	r := 1
+	for _, obj := range con.Objects {
+		r += countContainers(obj)
+	}
+	return r
+}
+
 func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name string) string {
 	for i := 0; i < len(pkgs); i++ {
 		if pkgs[i] == "xWidget" {
@@ -81,14 +93,17 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 	}
 
 	genids := make(map[string]bool)
+	deps := make(map[string]int)
 	for obj, props := range d.Metadata() {
 		if props["name"] != "" {
+			deps[props["name"]] = countContainers(obj)
 			continue
 		}
 		props["name"] = fmt.Sprintf("%p", obj)[1:]
 		props["name-is-generated"] = "1"
 
 		genids[props["name"]] = true
+		deps[props["name"]] = countContainers(obj)
 
 		d.Metadata()[obj] = props
 	}
@@ -98,9 +113,14 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 	_, clazz := getTypeOf(obj)
 	main := guidefs.GoString(clazz, obj, d, defs)
 	setup := ""
+	setupMap := make(map[string]string)
 
 	for name := range genids {
-		setup += name + " := " + defs[name] + "\n"
+		if deps[name] > 0 {
+			setupMap[name] = name + " := " + defs[name]
+		} else {
+			setup += name + " := " + defs[name] + "\n"
+		}
 	}
 
 	for _, key := range vars {
@@ -108,7 +128,23 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 		if genids[name] {
 			continue
 		}
-		setup += "g." + name + " = " + defs[name] + "\n"
+		if deps[name] > 0 {
+			setupMap[name] = "g." + name + " = " + defs[name]
+		} else {
+			setup += "g." + name + " = " + defs[name] + "\n"
+		}
+	}
+
+	setupNames := make([]string, 0, len(setupMap))
+	for name := range setupMap {
+		setupNames = append(setupNames, name)
+	}
+	sort.Slice(setupNames, func(i, j int) bool {
+		return deps[setupNames[i]] < deps[setupNames[j]]
+	})
+	setupAfter := make([]string, len(setupNames))
+	for i, name := range setupNames {
+		setupAfter[i] = setupMap[name]
 	}
 
 	attrs := []string{}
@@ -170,6 +206,7 @@ func wrapLayout(l func([]fyne.CanvasObject, fyne.Size), m func([]fyne.CanvasObje
 		Vars         []string
 		Attrs        []string
 		Setup        string
+		SetupAfter   []string
 		Main         string
 	}{
 		Pkgs:         pkgs,
@@ -179,6 +216,7 @@ func wrapLayout(l func([]fyne.CanvasObject, fyne.Size), m func([]fyne.CanvasObje
 		Vars:         vars,
 		Attrs:        attrs,
 		Setup:        setup,
+		SetupAfter:   setupAfter,
 		Main:         main,
 	}
 	code, err := tools.RenderCode(`// auto-generated
@@ -208,7 +246,10 @@ func new{{.GuiNameUpper}}GUI() *{{.GuiName}} {
 }
 
 func (g *{{.GuiName}}) makeUI() fyne.CanvasObject {
-	{{.Setup}}
+	{{.Setup -}}
+	{{ range .SetupAfter -}}
+	{{.}}
+	{{ end -}}
 
 	{{- range .Attrs}}
 		{{.}}
