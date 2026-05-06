@@ -72,6 +72,23 @@ func countContainers(obj fyne.CanvasObject) int {
 	return r
 }
 
+func stringMapToSlice(m map[string]string, fn func(a, b string) bool) []string {
+	keys := make([]string, len(m))
+	n := 0
+	for key := range m {
+		keys[n] = key
+		n++
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return fn(keys[i], keys[j])
+	})
+	r := make([]string, len(keys))
+	for i, key := range keys {
+		r[i] = m[key]
+	}
+	return r
+}
+
 func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name string) string {
 	for i := 0; i < len(pkgs); i++ {
 		if pkgs[i] == "xWidget" {
@@ -116,14 +133,14 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 
 	_, clazz := getTypeOf(obj)
 	main := guidefs.GoString(clazz, obj, d, defs)
-	setup := ""
-	setupMap := make(map[string]string)
+	setupBeforeMap := make(map[string]string)
+	setupAfterMap := make(map[string]string)
 
 	for name := range genids {
 		if deps[name] > 0 {
-			setupMap[name] = name + " := " + defs[name]
+			setupAfterMap[name] = name + " := " + defs[name]
 		} else {
-			setup += name + " := " + defs[name] + "\n"
+			setupBeforeMap[name] = name + " := " + defs[name]
 		}
 	}
 
@@ -133,23 +150,22 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 			continue
 		}
 		if deps[name] > 0 {
-			setupMap[name] = "g." + name + " = " + defs[name]
+			setupAfterMap[name] = "g." + name + " = " + defs[name]
 		} else {
-			setup += "g." + name + " = " + defs[name] + "\n"
+			setupBeforeMap[name] = "g." + name + " = " + defs[name]
 		}
 	}
 
-	setupNames := make([]string, 0, len(setupMap))
-	for name := range setupMap {
-		setupNames = append(setupNames, name)
-	}
-	sort.Slice(setupNames, func(i, j int) bool {
-		return deps[setupNames[i]] < deps[setupNames[j]]
+	setupBefore := stringMapToSlice(setupBeforeMap, func(a, b string) bool {
+		return a < b
 	})
-	setupAfter := make([]string, len(setupNames))
-	for i, name := range setupNames {
-		setupAfter[i] = setupMap[name]
-	}
+
+	setupAfter := stringMapToSlice(setupAfterMap, func(a, b string) bool {
+		if deps[a] == deps[b] {
+			return a < b
+		}
+		return deps[a] < deps[b]
+	})
 
 	attrs := []string{}
 	for obj, props := range d.Metadata() {
@@ -162,6 +178,7 @@ func exportCode(pkgs, vars []string, obj fyne.CanvasObject, d Context, name stri
 			attrs = append(attrs, id+"."+attr)
 		}
 	}
+	sort.Strings(attrs)
 
 	for obj, attrs := range battrs {
 		d.Attrs()[obj] = attrs
@@ -209,7 +226,7 @@ func wrapLayout(l func([]fyne.CanvasObject, fyne.Size), m func([]fyne.CanvasObje
 		GuiNameUpper string
 		Vars         []string
 		Attrs        []string
-		Setup        string
+		SetupBefore  []string
 		SetupAfter   []string
 		Main         string
 	}{
@@ -219,7 +236,7 @@ func wrapLayout(l func([]fyne.CanvasObject, fyne.Size), m func([]fyne.CanvasObje
 		GuiNameUpper: guiNameUpper,
 		Vars:         vars,
 		Attrs:        attrs,
-		Setup:        setup,
+		SetupBefore:  setupBefore,
 		SetupAfter:   setupAfter,
 		Main:         main,
 	}
@@ -250,7 +267,9 @@ func new{{.GuiNameUpper}}GUI() *{{.GuiName}} {
 }
 
 func (g *{{.GuiName}}) makeUI() fyne.CanvasObject {
-	{{.Setup -}}
+	{{ range .SetupBefore -}}
+	{{.}}
+	{{ end -}}
 	{{ range .SetupAfter -}}
 	{{.}}
 	{{ end -}}

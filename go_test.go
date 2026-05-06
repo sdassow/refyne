@@ -3,6 +3,7 @@ package refyne
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"testing"
 
 	"fyne.io/fyne/v2/container"
@@ -267,10 +268,27 @@ func TestExportGoWithoutIds(t *testing.T) {
 	buf := &bytes.Buffer{}
 	assert.NoError(t, ExportGo(con, ctx, name, buf))
 
+	lines := []string{
+		btnid + ` := widget.NewButton("Foo", nil)`,
+		lblid + ` := widget.NewLabel("Meep")`,
+		ntrid + ` := widget.NewEntry()`,
+	}
+	sort.Strings(lines)
+
+	attrLines := []string{
+		ntrid + `.OnSubmitted = g.coco.Hide`,
+		btnid + `.OnTapped = ` + ntrid + `.Hide`,
+	}
+	sort.Strings(attrLines)
+
 	data := struct {
 		BtnID, NtrID, LblID, BoxID string
+		Lines                      []string
+		AttrLines                  []string
 	}{
 		btnid, ntrid, lblid, boxid,
+		lines,
+		attrLines,
 	}
 
 	exp, err := tools.RenderCode(`// auto-generated
@@ -295,18 +313,18 @@ func newWhatGUI() *whatGui {
 }
 
 func (g *whatGui) makeUI() fyne.CanvasObject {
-	{{.LblId}} := widget.NewLabel("Meep")
-	{{.BtnId}} := widget.NewButton("Foo", nil)
-	{{.NtrId}} := widget.NewEntry()
-	{{.BoxId}} := container.NewVBox(
-		{{.NtrId}},
-		{{.BtnId}})
+	{{ range .Lines -}}
+	{{.}}
+	{{ end -}}
+	{{.BoxID}} := container.NewVBox(
+		{{.NtrID}},
+		{{.BtnID}})
 	g.coco = container.NewVBox(
-		{{.LblId}},
-		{{.BoxId}})
-
-	{{.NtrId}}.OnSubmitted = g.coco.Hide
-	{{.BtnId}}.OnTapped = {{.NtrId}}.Hide
+		{{.LblID}},
+		{{.BoxID}})
+{{ range .AttrLines }}
+	{{ . }}
+	{{- end }}
 
 	return g.coco
 }
@@ -314,4 +332,37 @@ func (g *whatGui) makeUI() fyne.CanvasObject {
 	assert.NoError(t, err)
 
 	assert.Equal(t, exp, buf.String())
+}
+
+func TestStringMapToSlice(t *testing.T) {
+	m := map[string]string{
+		"bam": "4",
+		"bar": "2",
+		"foo": "1",
+		"zap": "3",
+	}
+	assert.Equal(t, []string{"4", "2", "1", "3"}, stringMapToSlice(m, func(a, b string) bool {
+		return a < b
+	}))
+
+	m2 := map[string]string{
+		"bam": "a",
+		"bar": "b",
+		"foo": "c",
+		"moo": "d",
+		"zap": "e",
+	}
+	d2 := map[string]int{
+		"bam": 4,
+		"bar": 2,
+		"foo": 1,
+		"moo": 1,
+		"zap": 3,
+	}
+	assert.Equal(t, []string{"c", "d", "b", "e", "a"}, stringMapToSlice(m2, func(a, b string) bool {
+		if d2[a] == d2[b] {
+			return a < b
+		}
+		return d2[a] < d2[b]
+	}))
 }
