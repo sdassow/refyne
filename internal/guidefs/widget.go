@@ -966,14 +966,34 @@ func initProgressBarWidget() WidgetInfo {
 				}
 				onchanged()
 			}
+			minval := widget.NewEntry()
+			minval.SetText(fmt.Sprintf("%f", p.Min))
+			minval.OnChanged = func(s string) {
+				if f, err := strconv.ParseFloat(s, 64); err == nil {
+					p.Min = f
+					p.Refresh()
+				}
+				onchanged()
+			}
+			maxval := widget.NewEntry()
+			maxval.SetText(fmt.Sprintf("%f", p.Max))
+			maxval.OnChanged = func(s string) {
+				if f, err := strconv.ParseFloat(s, 64); err == nil {
+					p.Max = f
+					p.Refresh()
+				}
+				onchanged()
+			}
 			return []*widget.FormItem{
+				widget.NewFormItem("Min", minval),
+				widget.NewFormItem("Max", maxval),
 				widget.NewFormItem("Value", value),
 			}
 		},
 		Gostring: func(obj fyne.CanvasObject, c Context, defs map[string]string) string {
 			p := obj.(*widget.ProgressBar)
 			return widgetRef(obj, c, defs,
-				fmt.Sprintf("&widget.ProgressBar{Value: %f}", p.Value))
+				fmt.Sprintf("&widget.ProgressBar{Min: %f, Max: %f, Value: %f}", p.Min, p.Max, p.Value))
 		},
 	}
 }
@@ -1158,6 +1178,33 @@ func initSliderWidget() WidgetInfo {
 				}
 				onchanged()
 			}
+			minval := widget.NewEntry()
+			minval.SetText(fmt.Sprintf("%f", slider.Min))
+			minval.OnChanged = func(s string) {
+				if f, err := strconv.ParseFloat(s, 64); err == nil {
+					slider.Min = f
+					slider.Refresh()
+				}
+				onchanged()
+			}
+			maxval := widget.NewEntry()
+			maxval.SetText(fmt.Sprintf("%f", slider.Max))
+			maxval.OnChanged = func(s string) {
+				if f, err := strconv.ParseFloat(s, 64); err == nil {
+					slider.Max = f
+					slider.Refresh()
+				}
+				onchanged()
+			}
+			stepval := widget.NewEntry()
+			stepval.SetText(fmt.Sprintf("%f", slider.Step))
+			stepval.OnChanged = func(s string) {
+				if f, err := strconv.ParseFloat(s, 64); err == nil {
+					slider.Step = f
+					slider.Refresh()
+				}
+				onchanged()
+			}
 			vert := widget.NewCheck("", func(on bool) {
 				if on {
 					slider.Orientation = widget.Vertical
@@ -1169,7 +1216,10 @@ func initSliderWidget() WidgetInfo {
 			})
 			vert.Checked = slider.Orientation == widget.Vertical
 			return []*widget.FormItem{
+				widget.NewFormItem("Min", minval),
+				widget.NewFormItem("Max", maxval),
 				widget.NewFormItem("Value", val),
+				widget.NewFormItem("Step", stepval),
 				widget.NewFormItem("Vertical", vert),
 			}
 		},
@@ -1179,7 +1229,7 @@ func initSliderWidget() WidgetInfo {
 			if slider.Orientation == widget.Vertical {
 				orient = "widget.Vertical"
 			}
-			return widgetRef(obj, c, defs, fmt.Sprintf("&widget.Slider{Min:0, Max:100, Value:%f, Orientation: %s}", slider.Value, orient))
+			return widgetRef(obj, c, defs, fmt.Sprintf("&widget.Slider{Min:%f, Max:%f, Value:%f, Step:%f, Orientation: %s}", slider.Min, slider.Max, slider.Value, slider.Step, orient))
 		},
 	}
 }
