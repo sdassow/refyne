@@ -361,7 +361,7 @@ func initButtonWidget() WidgetInfo {
 			})
 			importance.SetSelectedIndex(int(b.Importance))
 
-			var left, center, right *widget.Button
+			var left, center, right, placeLeft, placeRight *widget.Button
 			setAlign := func(a widget.ButtonAlign) {
 				b.Alignment = a
 				b.Refresh()
@@ -394,10 +394,39 @@ func initButtonWidget() WidgetInfo {
 			aligns := container.NewHBox(left, center, right)
 			setAlign(b.Alignment)
 
+			setIconPlacement := func(a widget.ButtonIconPlacement) {
+				b.IconPlacement = a
+				b.Refresh()
+
+				setState := func(tb *widget.Button, a widget.ButtonIconPlacement) {
+					if b.IconPlacement == a {
+						tb.IconPlacement = widget.ButtonIconTrailingText
+					} else {
+						tb.IconPlacement = widget.ButtonIconLeadingText
+					}
+					tb.Refresh()
+				}
+
+				setState(placeLeft, widget.ButtonIconLeadingText)
+				setState(placeRight, widget.ButtonIconTrailingText)
+				if ready {
+					onchanged()
+				}
+			}
+			placeLeft = widget.NewButtonWithIcon("", resourceFormatalignleftSvg, func() {
+				setIconPlacement(widget.ButtonIconLeadingText)
+			})
+			placeRight = widget.NewButtonWithIcon("", resourceFormatalignrightSvg, func() {
+				setIconPlacement(widget.ButtonIconTrailingText)
+			})
+			setIconPlacement(b.IconPlacement)
+			placement := container.NewHBox(placeLeft, placeRight)
+
 			ready = true
 			return []*widget.FormItem{
 				widget.NewFormItem("Text", entry),
 				widget.NewFormItem("Icon", newIconSelectorButton(b.Icon, b.SetIcon, true)),
+				widget.NewFormItem("Icon Placement", placement),
 				widget.NewFormItem("Importance", importance),
 				widget.NewFormItem("Alignment", aligns),
 			}
