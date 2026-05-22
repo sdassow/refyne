@@ -583,9 +583,24 @@ func initEntryWidget() WidgetInfo {
 				l.SetPlaceHolder(text)
 				onchanged()
 			}
+			scroll := widget.NewSelect([]string{"Both","HorizontalOnly","VerticalOnly","None"}, func(text string) {
+				switch text {
+				case "Both":
+					l.Scroll = fyne.ScrollBoth
+				case "HorizontalOnly":
+					l.Scroll = fyne.ScrollHorizontalOnly
+				case "VerticalOnly":
+					l.Scroll = fyne.ScrollVerticalOnly
+				case "None":
+					l.Scroll = fyne.ScrollNone
+				}
+				l.Refresh()
+				onchanged()
+			})
 			return []*widget.FormItem{
 				widget.NewFormItem("Text", entry1),
 				widget.NewFormItem("PlaceHolder", entry2),
+				widget.NewFormItem("Scroll", scroll),
 			}
 		},
 		Gostring: func(obj fyne.CanvasObject, c Context, defs map[string]string) string {
@@ -609,6 +624,9 @@ func initEntryWidget() WidgetInfo {
 			}
 			if l.Password {
 				attrs = append(attrs, "Password = true")
+			}
+			if l.Scroll != fyne.ScrollBoth {
+				attrs = append(attrs, fmt.Sprintf("Scroll = %v", l.Scroll))
 			}
 			c.Attrs()[obj] = attrs
 
