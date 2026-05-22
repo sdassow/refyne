@@ -519,9 +519,19 @@ func initCheckWidget() WidgetInfo {
 				}
 			})
 			isChecked.SetChecked(c.Checked)
+			isPartial := widget.NewCheck("", func(b bool) {
+				c.Partial = b
+				c.Refresh()
+				if ready {
+					onchanged()
+				}
+			})
+			isPartial.Partial = c.Partial
+			isPartial.Refresh()
 			return []*widget.FormItem{
 				widget.NewFormItem("Title", title),
 				widget.NewFormItem("isChecked", isChecked),
+				widget.NewFormItem("isPartial", isPartial),
 			}
 		},
 		Gostring: func(obj fyne.CanvasObject, ctx Context, defs map[string]string) string {
