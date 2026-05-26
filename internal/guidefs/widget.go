@@ -594,7 +594,7 @@ func initEntryWidget() WidgetInfo {
 				l.SetPlaceHolder(text)
 				onchanged()
 			}
-			scroll := widget.NewSelect([]string{"Both","HorizontalOnly","VerticalOnly","None"}, func(text string) {
+			scroll := widget.NewSelect([]string{"Both", "HorizontalOnly", "VerticalOnly", "None"}, func(text string) {
 				switch text {
 				case "Both":
 					l.Scroll = fyne.ScrollBoth
