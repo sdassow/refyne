@@ -539,6 +539,14 @@ func initCheckWidget() WidgetInfo {
 		},
 		Gostring: func(obj fyne.CanvasObject, ctx Context, defs map[string]string) string {
 			c := obj.(*widget.Check)
+			attrs := ctx.Attrs()[obj]
+			if c.Checked {
+				attrs = append(attrs, "Checked = true")
+			}
+			if c.Partial {
+				attrs = append(attrs, "Partial = true")
+			}
+			ctx.Attrs()[obj] = attrs
 			return widgetRef(obj, ctx, defs,
 				fmt.Sprintf("widget.NewCheck(\"%s\", func(b bool) {})", escapeLabel(c.Text)))
 		},
