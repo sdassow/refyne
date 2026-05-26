@@ -400,9 +400,9 @@ func initButtonWidget() WidgetInfo {
 
 				setState := func(tb *widget.Button, a widget.ButtonIconPlacement) {
 					if b.IconPlacement == a {
-						tb.IconPlacement = widget.ButtonIconTrailingText
+						tb.Importance = widget.HighImportance
 					} else {
-						tb.IconPlacement = widget.ButtonIconLeadingText
+						tb.Importance = widget.MediumImportance
 					}
 					tb.Refresh()
 				}
@@ -441,6 +441,9 @@ func initButtonWidget() WidgetInfo {
 			}
 			if b.Icon != nil {
 				attrs = append(attrs, "Icon = theme."+IconName(b.Icon)+"()")
+			}
+			if b.IconPlacement != widget.ButtonIconLeadingText {
+				attrs = append(attrs, fmt.Sprintf("IconPlacement = %d", b.IconPlacement))
 			}
 			if b.Importance != widget.MediumImportance {
 				attrs = append(attrs, fmt.Sprintf("Importance = %d", b.Importance))
