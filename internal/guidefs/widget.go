@@ -361,7 +361,7 @@ func initButtonWidget() WidgetInfo {
 			})
 			importance.SetSelectedIndex(int(b.Importance))
 
-			var left, center, right *widget.Button
+			var left, center, right, placeLeft, placeRight *widget.Button
 			setAlign := func(a widget.ButtonAlign) {
 				b.Alignment = a
 				b.Refresh()
@@ -394,10 +394,39 @@ func initButtonWidget() WidgetInfo {
 			aligns := container.NewHBox(left, center, right)
 			setAlign(b.Alignment)
 
+			setIconPlacement := func(a widget.ButtonIconPlacement) {
+				b.IconPlacement = a
+				b.Refresh()
+
+				setState := func(tb *widget.Button, a widget.ButtonIconPlacement) {
+					if b.IconPlacement == a {
+						tb.Importance = widget.HighImportance
+					} else {
+						tb.Importance = widget.MediumImportance
+					}
+					tb.Refresh()
+				}
+
+				setState(placeLeft, widget.ButtonIconLeadingText)
+				setState(placeRight, widget.ButtonIconTrailingText)
+				if ready {
+					onchanged()
+				}
+			}
+			placeLeft = widget.NewButtonWithIcon("", resourceFormatalignleftSvg, func() {
+				setIconPlacement(widget.ButtonIconLeadingText)
+			})
+			placeRight = widget.NewButtonWithIcon("", resourceFormatalignrightSvg, func() {
+				setIconPlacement(widget.ButtonIconTrailingText)
+			})
+			setIconPlacement(b.IconPlacement)
+			placement := container.NewHBox(placeLeft, placeRight)
+
 			ready = true
 			return []*widget.FormItem{
 				widget.NewFormItem("Text", entry),
 				widget.NewFormItem("Icon", newIconSelectorButton(b.Icon, b.SetIcon, true)),
+				widget.NewFormItem("Icon Placement", placement),
 				widget.NewFormItem("Importance", importance),
 				widget.NewFormItem("Alignment", aligns),
 			}
@@ -412,6 +441,9 @@ func initButtonWidget() WidgetInfo {
 			}
 			if b.Icon != nil {
 				attrs = append(attrs, "Icon = theme."+IconName(b.Icon)+"()")
+			}
+			if b.IconPlacement != widget.ButtonIconLeadingText {
+				attrs = append(attrs, fmt.Sprintf("IconPlacement = %d", b.IconPlacement))
 			}
 			if b.Importance != widget.MediumImportance {
 				attrs = append(attrs, fmt.Sprintf("Importance = %d", b.Importance))
@@ -490,13 +522,31 @@ func initCheckWidget() WidgetInfo {
 				}
 			})
 			isChecked.SetChecked(c.Checked)
+			isPartial := widget.NewCheck("", func(b bool) {
+				c.Partial = b
+				c.Refresh()
+				if ready {
+					onchanged()
+				}
+			})
+			isPartial.Partial = c.Partial
+			isPartial.Refresh()
 			return []*widget.FormItem{
 				widget.NewFormItem("Title", title),
 				widget.NewFormItem("isChecked", isChecked),
+				widget.NewFormItem("isPartial", isPartial),
 			}
 		},
 		Gostring: func(obj fyne.CanvasObject, ctx Context, defs map[string]string) string {
 			c := obj.(*widget.Check)
+			attrs := ctx.Attrs()[obj]
+			if c.Checked {
+				attrs = append(attrs, "Checked = true")
+			}
+			if c.Partial {
+				attrs = append(attrs, "Partial = true")
+			}
+			ctx.Attrs()[obj] = attrs
 			return widgetRef(obj, ctx, defs,
 				fmt.Sprintf("widget.NewCheck(\"%s\", func(b bool) {})", escapeLabel(c.Text)))
 		},
@@ -544,9 +594,24 @@ func initEntryWidget() WidgetInfo {
 				l.SetPlaceHolder(text)
 				onchanged()
 			}
+			scroll := widget.NewSelect([]string{"Both", "HorizontalOnly", "VerticalOnly", "None"}, func(text string) {
+				switch text {
+				case "Both":
+					l.Scroll = fyne.ScrollBoth
+				case "HorizontalOnly":
+					l.Scroll = fyne.ScrollHorizontalOnly
+				case "VerticalOnly":
+					l.Scroll = fyne.ScrollVerticalOnly
+				case "None":
+					l.Scroll = fyne.ScrollNone
+				}
+				l.Refresh()
+				onchanged()
+			})
 			return []*widget.FormItem{
 				widget.NewFormItem("Text", entry1),
 				widget.NewFormItem("PlaceHolder", entry2),
+				widget.NewFormItem("Scroll", scroll),
 			}
 		},
 		Gostring: func(obj fyne.CanvasObject, c Context, defs map[string]string) string {
@@ -570,6 +635,9 @@ func initEntryWidget() WidgetInfo {
 			}
 			if l.Password {
 				attrs = append(attrs, "Password = true")
+			}
+			if l.Scroll != fyne.ScrollBoth {
+				attrs = append(attrs, fmt.Sprintf("Scroll = %v", l.Scroll))
 			}
 			c.Attrs()[obj] = attrs
 
